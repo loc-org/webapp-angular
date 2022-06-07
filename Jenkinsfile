@@ -1,7 +1,7 @@
 
 pipeline {
     agent {
-        docker { image 'hello-world:latest' }
+        any
     }
     triggers {
         githubPush()
@@ -13,6 +13,7 @@ pipeline {
     stages {
         stage('Build') {
             steps {
+                sh 'whoami'
                 echo "this was executed on a spot instance"
                 echo "deploying with ${GITHUB_CREDENTIALS}"
                 withCredentials([
