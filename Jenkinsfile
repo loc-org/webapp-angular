@@ -1,9 +1,7 @@
 
 pipeline {
     agent {
-        ecs {
-            inheritFrom 'build-example-spot'
-        }
+        any
     }
     triggers {
         githubPush()
