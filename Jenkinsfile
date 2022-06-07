@@ -1,7 +1,7 @@
 
 pipeline {
     agent {
-        docker { image 'hello-world:latest' } }
+        docker { image 'hello-world:latest' }
     }
     triggers {
         githubPush()
