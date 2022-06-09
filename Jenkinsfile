@@ -2,75 +2,86 @@ pipeline {
     agent {
         label 'tooling'
     }
+
     triggers {
         githubPush()
     }
+
     environment {
-        NEW_VERSION = '1.3.0'
+        // SERVICE_NAME = "pids-webapp"
+        // General variables
+        ACCOUNT_ID = "398692602192"
+        REGION = "ap-southeast-1"
+        DEVOP_ORG = "pids-devops"
         GITHUB_CREDENTIALS = credentials('github')
+
+        // Service variables
+        SERVICE_NAME = "webapp"
+        ECR_URI = "${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
+        IMAGE_REPO = "${ECR_URI}/${SERVICE_NAME}"
+        // DEVOPS_REPO = "https://github.com/${DEVOP_ORG}/${SERVICE_NAME}"
+        TAG = "${BUILD_ID}"
     }
+
     stages {
+        stage('Preparation') {
+            steps {
+                echo "Login to ECR.."
+                sh '''
+                    set +x
+                    REPO_LOGIN_PWD=$(aws ecr get-login-password --region ap-southeast-1)
+                    docker login -u AWS -p $REPO_LOGIN_PWD $ECR_URI
+                '''
+            }
+        }
+
         stage('Build') {
             steps {
-                script {
-                    echo "deploying with ${env.GITHUB_CREDENTIALS}"
-                    echo "build number: ${env.BUILD_NUMBER}"
-                    withCredentials([
-                        usernamePassword(credentialsId: 'github', usernameVariable: 'USER', passwordVariable: 'PASSWORD')
-                    ]) {
-                        echo "some script ${env.USER} ${env.PASSWORD}"
-                    }
+                sh '''
+                    echo No build required for Webapp.
+                '''
+            }
+        }
+
+        stage('Build and Deploy Image ') {
+            steps {
+                sh '''
+                    docker build -t $IMAGE_REPO:$TAG .
+                    docker push $IMAGE_REPO:$TAG
+                '''
+                echo 'Finished pushing image to ECR repo'
+            }
+        }
+
+        stage('Clean App Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage('Clone Devops Repo') {
+            steps {
+                 // script {
+                //     echo "deploying with ${env.GITHUB_CREDENTIALS}"
+                //     echo "build number: ${env.BUILD_NUMBER}"
+                //     withCredentials([
+                //         usernamePassword(credentialsId: 'github', usernameVariable: 'USER', passwordVariable: 'PASSWORD')
+                //     ]) {
+                //         echo "some script ${env.USER} ${env.PASSWORD}"
+                //     }
+                // }
+                withCredentials([
+                    usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')
+                ]) {
+                    echo "some script ${env.GIT_USER} ${env.GIT_TOKEN}"
                 }
                 sh '''
-                    docker build -t webapp-angular .
+                    echo https://$GIT_TOKEN@github.com/$DEVOP_ORG/$SERVICE_NAME.git
+                    git clone https://$GIT_TOKEN@github.com/$DEVOP_ORG/$SERVICE_NAME.git
                 '''
-
-                
-                // sh 'ls'
-                // echo 'Login in to Amazon ECR...'
-                // // sh ' | docker login --username AWS --password-stdin 398692602192.dkr.ecr.ap-southeast-1.amazonaws.com'
-                // sh 'REPO_PWD=$(aws ecr get-login-password --region ap-southeast-1)'
-                // sh 'docker login -u AWS -p ${REPO_PWD} 398692602192.dkr.ecr.ap-southeast-1.amazonaws.com'
-                // echo 'build image'
-                // sh 'docker build -t webapp-angular .'
-                // sh 'docker tag webapp-angular:latest 398692602192.dkr.ecr.ap-southeast-1.amazonaws.com/webapp-angular:latest'
-                // echo 'push image'
-                // sh 'docker push 398692602192.dkr.ecr.ap-southeast-1.amazonaws.com/webapp-angular:latest'
+                // git push https://<GITHUB_ACCESS_TOKEN>@github.com/<GITHUB_USERNAME>/<REPOSITORY_NAME>.git
+                // "https://github.com/${DEVOP_ORG}/${SERVICE_NAME}"
             }
         }
-        stage('Test') {
-            steps {
-                echo 'deploying the application'
-            }
-        }
-        // stage('Clone repository') { 
-        //     steps { 
-        //         script {
-        //             checkout scm
-        //         }
-        //     }
-        // }
-        // stage('Build') { 
-        //     steps { 
-        //         script {
-        //             app = docker.build("underwater")
-        //         }
-        //     }
-        // }
-        // stage('Test'){
-        //     steps {
-        //         echo 'Empty'
-        //     }
-        // }
-        // stage('Deploy') {
-        //     steps {
-        //         script {
-        //             docker.withRegistry('https://720766170633.dkr.ecr.us-east-2.amazonaws.com', 'ecr:us-east-2:aws-credentials') {
-        //                 app.push("${env.BUILD_NUMBER}")
-        //                 app.push("latest")
-        //             }
-        //         }
-        //     }
-        // }
     }
 }
